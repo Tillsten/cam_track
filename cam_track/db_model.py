@@ -31,4 +31,4 @@ def define_model():
         A = Required(float)
         off = Required(float)
     
-    return db, Entry, CamLogEntry, FitResult
+    return db#, Entry, CamLogEntry, FitResult
