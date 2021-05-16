@@ -1,0 +1,6 @@
+qtpy
+numpy
+scipy
+lmfit
+ponyorm
+pyqtgraph
