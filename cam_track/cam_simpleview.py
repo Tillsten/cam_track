@@ -5,7 +5,7 @@ from pyqtgraph import (ROI, DateAxisItem, EllipseROI, ImageItem, IsocurveItem,
 from pyqtgraph.graphicsItems.TargetItem import TargetItem
 from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal, Slot
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import (QAction, QApplication, QHBoxLayout, QMainWindow,
+from qtpy.QtWidgets import (QAction, QApplication, QHBoxLayout, QMainWindow, QDialog,
                             QPushButton, QStyle, QToolBar, QVBoxLayout,
                             QFileDialog, QWidget)
 from pathlib import Path
@@ -84,8 +84,8 @@ class HistView(QWidget):
             return
         self.plot_widget.plotItem.clear()
         for c in self.tracker.cams:
-            x, y = self.tracker.get_param_history('c', self.cur_param)
-        self.plot_widget.plot(x, y)
+            x, y = self.tracker.get_param_history(c.name, self.cur_param)
+            self.plot_widget.plot(x, y)
 
 
 class Controls(QWidget):
@@ -165,6 +165,7 @@ class Main(QMainWindow):
         self.load_action.triggered.connect(self.load_db)
         toolbar.addAction(self.load_action)
 
+    @Slot()
     def load_db(self):
         fname, ftype = QFileDialog.getOpenFileName(
             self,
@@ -175,14 +176,16 @@ class Main(QMainWindow):
         if fname != "":
             self.qttracker.tracker.open_db(fname)
 
-
+    @Slot()
     def new_db(self):
         fname, ftype = QFileDialog.getSaveFileName(
             self, "New file",     
             str(Path.home()),
             "CamTrack Files (*.camtrack)",
             options=QFileDialog.DontUseNativeDialog)
-        self.qttracker.tracker.open_db(fname)
+        if fname != 0:
+            Path(fname).unlink()
+            self.qttracker.tracker.open_db(fname)
         
 
 
@@ -194,8 +197,10 @@ if __name__ == '__main__':
 
     app = QApplication([])
     qtmodern.styles.dark(app)
-
-    cams = [MockCam()]
+    
+    cams = [MockCam(), MockCam(name="TestCam2", x_amp=0.3, y_amp=4)]
+    if (p := Path.home() / 'test.camtrack').exists():
+        p.unlink()
     tracker = Tracker(str(Path.home() / 'test.camtrack'), cams)
 
     thr = QThread()

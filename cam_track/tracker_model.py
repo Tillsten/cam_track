@@ -59,7 +59,7 @@ class Tracker:
     @db_session
     def get_param_history(self, cam: str, pname: str):
         q = select((e.entry.date_added, getattr(e.fit_result, pname))
-                   for e in self.db.CamLogEntry)
+                   for e in self.db.CamLogEntry if e.cam == cam)
         x, y = [], []
         for (d, v) in q:
             #x.append(np.datetime64(d))
@@ -89,7 +89,7 @@ class Tracker:
     @db_session
     def pandas_export(self):
         import pandas as pd
-        
+
 if __name__ == '__main__':
     from cam_track.cam_model import MockCam
     tc = MockCam()

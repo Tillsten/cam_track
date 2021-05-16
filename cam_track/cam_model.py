@@ -91,12 +91,14 @@ class Cam(ABC):
 class MockCam(Cam):
     name: str = "TestCam"
     config: Dict[str, Any] = field(default_factory=dict)
+    x_amp : float = 3
+    y_amp : float = 3
 
     def read_cam(self) -> np.ndarray:
         t = dt.datetime.now()
         now = t.second + 1e-6 * t.microsecond        
-        xc = 3 * sin(now / 60.0 * 2 * np.pi * 3)
-        yc = 3 * cos(now / 60.0 * 2 * np.pi * 3)
+        xc = self.x_amp * sin(now / 60.0 * 2 * np.pi * 3)
+        yc = self.y_amp * cos(now / 60.0 * 2 * np.pi * 3)
         x, y = np.linspace(-10, 10, 320 // 2) - xc, np.linspace(
             -10 - yc, 10 + yc, 240 // 2) - yc
         gauss = np.exp(-0.5 * (x[:, None]**2 + y[None, :]**2) / (2**2))
