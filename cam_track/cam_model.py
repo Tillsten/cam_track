@@ -32,7 +32,7 @@ def gaussfit(x, y, x0, y0, A, sigma_x, sigma_y, theta, off):
 gauss_mod = lmfit.Model(gaussfit, independent_vars=['x', 'y'])
 for p in ['sigma_X', 'sigma_Y']:
     gauss_mod.set_param_hint(p, min=0)
-gauss_mod.set_param_hint('theta', min=0, max=np.pi / 4)
+gauss_mod.set_param_hint('theta', vary=0, min=0, max=np.pi / 4)
 
 
 @dataclass
@@ -73,6 +73,9 @@ class Cam(ABC):
                 'x0': x0,
                 'y0': y0,
             }
+        gauss_mod.set_param_hint('x0', min=0, max=self.last_image.shape[0])
+        gauss_mod.set_param_hint('y0', min=0, max=self.last_image.shape[1])
+
         fr = gauss_mod.fit(self.last_image,
                            x=x,
                            y=y,
@@ -105,4 +108,6 @@ class MockCam(Cam):
         image = np.random.normal(loc=gauss * 120, scale=5) + 10
         self.last_image = image
         return image
+
+
 

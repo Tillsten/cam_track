@@ -14,8 +14,8 @@ def define_model():
     class CamLogEntry(db.Entity):
         entry = Required(Entry)
         cam = Required(str)
-        loc_x = Required(float)
-        loc_y = Required(float)
+        loc_x = Optional(float)
+        loc_y = Optional(float)
         mean = Required(float)
         max = Required(float)
         fit_result = Optional(lambda: FitResult)

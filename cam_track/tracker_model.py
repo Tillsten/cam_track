@@ -6,7 +6,7 @@ from pony.orm import db_session, select, set_sql_debug, left_join
 from cam_track.db_model import define_model  #CamLogEntry, Entry, FitResult, db
 from typing import Any, List, Iterable
 from cam_track.cam_model import Cam
-
+from math import isnan
 
 @dataclass
 class Tracker:
@@ -32,6 +32,9 @@ class Tracker:
         for c in self.cams:
             c.read_cam()
             com = c.get_com()
+            if isnan(com[0]):
+                return 0
+            print(com)
 
             entry = db.Entry(date_added=dt.datetime.now(), cam_entries=[])
 
@@ -49,12 +52,13 @@ class Tracker:
             fre = db.FitResult(cam_entry=centry,
                                x0=fr.params['x0'],
                                y0=fr.params['y0'],
-                               sigma_x=fr.params['sigma_X'],
-                               sigma_y=fr.params['sigma_Y'],
+                               sigma_x=fr.params['sigma_x'],
+                               sigma_y=fr.params['sigma_y'],
                                A=fr.params['A'],
                                theta=fr.params['theta'],
                                off=fr.params['off'])
             centry.fit_result = fre
+            return True
 
     @db_session
     def get_param_history(self, cam: str, pname: str):

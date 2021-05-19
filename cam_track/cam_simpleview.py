@@ -1,7 +1,9 @@
+import sys
+sys.path.append('..')
 from typing import Optional, Tuple, List
 import numpy as np
 from pyqtgraph import (ROI, DateAxisItem, EllipseROI, ImageItem, IsocurveItem,
-                       PlotWidget, colormap, makeARGB)
+                       PlotWidget, colormap, makeARGB, mkPen, mkColor)
 from pyqtgraph.graphicsItems.TargetItem import TargetItem
 from qtpy.QtCore import QObject, Qt, QThread, QTimer, Signal, Slot
 from qtpy.QtGui import QIcon
@@ -20,7 +22,7 @@ class CamView(PlotWidget):
         self.main_plot_item = self.plotItem
         self.last_centers: List[Tuple[float]] = []
         self.image_item = ImageItem(cam.read_cam())
-        cmap = colormap.get('CET-C2')
+        #cmap = colormap.get('CET-C2')
         #self.image_item.setLookupTable(cmap.getLookupTable())
 
         self.target = TargetItem(movable=False)
@@ -29,6 +31,8 @@ class CamView(PlotWidget):
 
         self.iso_curve = IsocurveItem()
         self.iso_curve.setParentItem(self.image_item)
+        self.iso_curve2 = IsocurveItem()
+        self.iso_curve2.setParentItem(self.image_item)
         self.main_plot_item.addItem(self.iso_curve)
         self.center_hist = self.main_plot_item.plot(pen='r')
 
@@ -42,9 +46,10 @@ class CamView(PlotWidget):
         if not self.cam.last_fit is None:
             lf = self.cam.last_fit
             center = (lf.params['x0'], lf.params['y0'])
-            self.target.setPos(center)
+            self.target.setPos(*center)
             self.last_centers = [center] + self.last_centers[:30]
             self.iso_curve.setData(lf.best_fit, lf.best_fit.max() * 0.5)
+            self.iso_curve2.setData(lf.best_fit, lf.best_fit.max() * np.exp(-2))
             arr = np.array(self.last_centers)
             self.center_hist.setData(x=arr[:, 0], y=arr[:, 1])
 
@@ -84,8 +89,9 @@ class HistView(QWidget):
             return
         self.plot_widget.plotItem.clear()
         for c in self.tracker.cams:
-            x, y = self.tracker.get_param_history(c.name, self.cur_param)
-            self.plot_widget.plot(x, y)
+            for i, p in enumerate(['x0', 'y0', 'sigma_x', 'sigma_y']):
+                x, y = self.tracker.get_param_history(c.name, p)
+                self.plot_widget.plot(x, y, pen=mkPen(i))
 
 
 class Controls(QWidget):
@@ -124,12 +130,13 @@ class QtTracker(QObject):
     def start_recording(self):
         self.timer = QTimer()
         self.timer.timeout.connect(self.track)
-        self.timer.start(300)
+        self.timer.start(2000)
         self.tracking_started.emit()
 
     def track(self):
-        self.tracker.track()
-        self.new_entry.emit()
+        ret = self.tracker.track()
+        if ret:
+            self.new_entry.emit()
 
     @Slot()
     def stop_recording(self):
@@ -184,8 +191,9 @@ class Main(QMainWindow):
             "CamTrack Files (*.camtrack)",
             options=QFileDialog.DontUseNativeDialog)
         if fname != 0:
-            Path(fname).unlink()
-            self.qttracker.tracker.open_db(fname)
+            if (p :=  Path(fname).with_suffix('.camtrack')).exists():
+                p.unlink()
+            self.qttracker.tracker.open_db(fname+'.camtrack')
         
 
 
@@ -194,14 +202,14 @@ if __name__ == '__main__':
     import qtmodern.windows
 
     from cam_track.cam_model import MockCam
-
+    from cam_track.cam_opencv import OpenCVCam
     app = QApplication([])
     qtmodern.styles.dark(app)
     
-    cams = [MockCam(), MockCam(name="TestCam2", x_amp=0.3, y_amp=4)]
-    if (p := Path.home() / 'test.camtrack').exists():
+    cams = [OpenCVCam(name='ts', config=dict())]
+    if (p := Path.home() / 'test2.camtrack').exists():
         p.unlink()
-    tracker = Tracker(str(Path.home() / 'test.camtrack'), cams)
+    tracker = Tracker(str(Path.home() / 'test2.camtrack'), cams)
 
     thr = QThread()
     m = Main(tracker)
